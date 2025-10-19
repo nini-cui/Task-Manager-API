@@ -3,7 +3,7 @@ from enum import Enum
 
 class TaskType(Enum):
     COMPUTE_SUM = "COMPUTE_SUM"
-    GENERATEREPORT = "GENERATE_REPORT"
+    GENERATE_REPORT = "GENERATE_REPORT"
 
 class TaskRequest(BaseModel):
     task_type: TaskType
