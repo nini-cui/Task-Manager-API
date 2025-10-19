@@ -28,15 +28,14 @@ async def get_tasks(status: Optional[str] = None, limit: Optional[int] = None):
                     "task_id": tid,
                     "status": task["status"],
                     "parameters": task["parameters"],
-                    "result": task["resul"]
+                    "result": task["result"]
                 } 
-                for tid, task in task_manager.tasks_status.items if task["status"] == status
+                for tid, task in task_manager.tasks_status.items() if task["status"] == status
             ]
 
             return {"tasks": tasks}
-        elif len(task_manager.tasks_status) > limit:
-            return StreamingResponse(task_manager.task_stream(status, limit), )
-    # else return all data or set a threashold
+        
+    return StreamingResponse(task_manager.task_stream(status), media_type='text/plain')
 
 if __name__ == "__main__":
     uvicorn.run(app, port=8000)
