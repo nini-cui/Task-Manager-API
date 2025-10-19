@@ -58,5 +58,17 @@ async def get_task(task_id: str, wait: bool = None):
 
     return {"status": task["status"], "result": task["result"]}
 
+@app.delete("/tasks/{task_id}")
+async def cancel_task(task_id: str):
+    task = task_manager.tasks_status[task_id]
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    
+    cancelled = await task_manager.cancel_task(task_id)
+    if not cancelled:
+        raise HTTPException(status_code=400, detail="Task already processing or completed")
+    
+    return {"task_id": task_id, "status": "cancelled"}
+
 if __name__ == "__main__":
     uvicorn.run(app, port=8000)

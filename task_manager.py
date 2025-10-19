@@ -22,7 +22,7 @@ class TaskManager:
         }
         logging.info(f'task {task_id} created with parameter {task_request.parameters}')
         self.task_events[task_id] = asyncio.Event()
-        
+
         await self.task_queue.put(task_id)
 
         return task_id
@@ -61,6 +61,11 @@ class TaskManager:
         while True:
             tid = await self.task_queue.get()
             print(f'tid is: {tid}')
+
+            if self.tasks_status[tid]['status'] == "cancelled":
+                self.task_queue.task_done()
+                continue
+            
             await self.process_task(tid)
             self.task_queue.task_done()
             
@@ -86,4 +91,23 @@ class TaskManager:
             except asyncio.TimeoutError:
                 pass  # just return current status
         return self.tasks_status.get(task_id)
+    
+    async def cancel_task(self, task_id: str):
+        if task_id not in self.tasks_status:
+            return False
+
+        status = self.tasks_status[task_id]["status"]
+        if status != "queued":
+            return False
+
+        # Mark as cancelled
+        self.tasks_status[task_id]["status"] = "cancelled"
+        self.tasks_status[task_id]["result"] = None
+
+        # Notify anyone waiting
+        if task_id in self.task_events:
+            self.task_events[task_id].set()
+
+        print(f"Task {task_id} marked as cancelled (still in queue)")
+        return True
       
