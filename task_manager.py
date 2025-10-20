@@ -59,15 +59,20 @@ class TaskManager:
 
     async def worker_loop(self):
         while True:
-            tid = await self.task_queue.get()
-            print(f'tid is: {tid}')
+            tasks_to_process = []
+            for _ in range(self.max_workers):
+                tid = await self.task_queue.get()
+                print(f'tid is: {tid}')
 
-            if self.tasks_status[tid]['status'] == "cancelled":
-                self.task_queue.task_done()
-                continue
-            
-            await self.process_task(tid)
-            self.task_queue.task_done()
+                if self.tasks_status[tid]['status'] != "cancelled":
+                    tasks_to_process.append(tid)
+
+            if tasks_to_process:
+                try:
+                    await self.process_task(tid)
+                except asyncio.CancelledError:
+                    logging.info("Task cancelled successfully!")
+                    break
             
     async def task_stream(self, status):
         for tid, task in self.tasks_status.items():
@@ -110,4 +115,6 @@ class TaskManager:
 
         print(f"Task {task_id} marked as cancelled (still in queue)")
         return True
+    
+    
       

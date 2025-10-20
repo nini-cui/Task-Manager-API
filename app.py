@@ -5,16 +5,17 @@ from task_manager import TaskManager
 from typing import Optional
 from fastapi.responses import StreamingResponse
 from contextlib import asynccontextmanager
+from rate_limit import RateLimitMiddleware
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    for _ in range(task_manager.max_workers):
-        asyncio.create_task(task_manager.worker_loop())
+    asyncio.create_task(task_manager.worker_loop())
     print("Background worker started")
     yield 
     print("App shutting down")
 
 app = FastAPI(lifespan=lifespan)
+app.add_middleware(RateLimitMiddleware)
 task_manager = TaskManager(max_workers=5)
 
 @app.post('/tasks', status_code=202)
