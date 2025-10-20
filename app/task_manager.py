@@ -1,16 +1,20 @@
-import asyncio
-import uuid, logging
-from models import TaskRequest, TaskType
-from exception import InvalidNumberError, ReportGenerationError
+import asyncio, time, uuid, logging
+from models import TaskRequest
+from exception import InvalidNumberError
+from fastapi import HTTPException
 
 class TaskManager:
     def __init__(self, 
                 max_workers
                 ):
         self.max_workers = max_workers
-        self.task_queue = asyncio.Queue()
+        self.task_queue = asyncio.Queue(maxsize=100)
         self.tasks_status = {}
         self.task_events = {}
+
+        # params for cleanup task
+        self.cleanup_interval = 60
+        self.task_ttl = 600
 
     async def submit_task(self, task_request: TaskRequest):
         task_id = str(uuid.uuid4())
@@ -18,12 +22,16 @@ class TaskManager:
             "status": "queued",
             "parameters": task_request.parameters,
             "result": None,
-            "task_type": task_request.task_type
+            "task_type": task_request.task_type,
+            "created_time": time.time()
         }
         logging.info(f'task {task_id} created with parameter {task_request.parameters}')
         self.task_events[task_id] = asyncio.Event()
 
-        await self.task_queue.put(task_id)
+        try:
+            self.task_queue.put_nowait(task_id)
+        except asyncio.QueueFull:
+            raise HTTPException(status_code=503, detail="Task queue full, try again later")
 
         return task_id
     
@@ -115,6 +123,26 @@ class TaskManager:
 
         print(f"Task {task_id} marked as cancelled (still in queue)")
         return True
+    
+    async def cleanup_task(self):
+        while True:
+            cur_ts = time.time()
+
+            task_to_delete = []
+
+            for tid, task in self.tasks_status.items():
+                if (task["status"] in ("completed", "failed", "cancelled")) and (cur_ts - task["created_time"] > self.task_ttl):
+                    task_to_delete.append(tid)
+
+            if task_to_delete:
+                # pop from tasks_status list
+                logging.info(f"cleaning up task: {tid}")
+                for tid in task_to_delete:
+                    self.tasks_status.pop(tid, None)
+                    self.task_events.pop(tid, None)
+
+            await asyncio.sleep(self.cleanup_interval)
+
     
     
       

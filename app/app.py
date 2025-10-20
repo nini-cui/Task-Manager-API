@@ -10,6 +10,7 @@ from rate_limit import RateLimitMiddleware
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     asyncio.create_task(task_manager.worker_loop())
+    asyncio.create_task(task_manager.cleanup_task())
     print("Background worker started")
     yield 
     print("App shutting down")
