@@ -1,6 +1,6 @@
 import asyncio, time, uuid, logging
-from models import TaskRequest
-from exception import InvalidNumberError
+from app.models import TaskRequest
+from app.exception import InvalidNumberError
 from fastapi import HTTPException
 
 class TaskManager:
@@ -30,6 +30,7 @@ class TaskManager:
 
         try:
             self.task_queue.put_nowait(task_id)
+            print(f'task queue is: {self.task_queue}')
         except asyncio.QueueFull:
             raise HTTPException(status_code=503, detail="Task queue full, try again later")
 
@@ -77,7 +78,7 @@ class TaskManager:
 
             if tasks_to_process:
                 try:
-                    await self.process_task(tid)
+                    await asyncio.gather(*[self.process_task(tid) for tid in tasks_to_process])
                 except asyncio.CancelledError:
                     logging.info("Task cancelled successfully!")
                     break

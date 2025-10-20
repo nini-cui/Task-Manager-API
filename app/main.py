@@ -1,11 +1,11 @@
 from fastapi import FastAPI, HTTPException
 import uvicorn, asyncio
-from models import TaskRequest
-from task_manager import TaskManager
+from app.models import TaskRequest
+from app.task_manager import TaskManager
 from typing import Optional
 from fastapi.responses import StreamingResponse
 from contextlib import asynccontextmanager
-from rate_limit import RateLimitMiddleware
+from app.rate_limit import RateLimitMiddleware
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
